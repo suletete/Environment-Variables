@@ -1,4 +1,4 @@
-Based on the feedback you received, here’s how to improve and rewrite the project to meet all the requirements:
+
 
 ### Mini Project - aws_cloud_manager.sh Script for AWS EC2 Provisioning
 
