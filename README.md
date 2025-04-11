@@ -1,111 +1,129 @@
-In this mini project, the focus was to understand two important concepts: **Infrastructure Environments** and **Environment Variables**, and how these concepts relate to each other, particularly in the context of shell scripting for managing cloud infrastructure, such as AWS.
+Based on the feedback you received, here’s how to improve and rewrite the project to meet all the requirements:
 
-### Key Concepts:
+### Mini Project - aws_cloud_manager.sh Script for AWS EC2 Provisioning
 
-1. **Infrastructure Environments**: These refer to the different settings in which software is developed, tested, and deployed. For example, in cloud-based development (using AWS), you could have multiple environments:
-   - **Local Environment**: The environment on your local machine (e.g., VirtualBox with Ubuntu).
-   - **Testing Environment**: A remote environment, such as an EC2 instance in AWS, where you test your code.
-   - **Production Environment**: The final environment where the application is deployed for end-users, typically hosted on another AWS EC2 instance.
+**Objective:**
+To write a shell script that dynamically provisions EC2 instances in different environments (local, testing, and production) using AWS CLI. The script should handle environment variables, command-line arguments, and error feedback mechanisms.
 
-   Each of these environments serves a different role in the software development lifecycle.
+### **Key Features to Implement:**
+1. **Environment Variables Handling:** The script should dynamically adjust for different environments by using environment variables or command-line arguments.
+2. **AWS CLI Integration:** The script should use AWS CLI to provision EC2 instances dynamically in local, testing, or production environments, based on the input parameters.
+3. **Error Handling & User Feedback:** It should provide feedback about the success or failure of AWS CLI commands.
+4. **Multiple Command-Line Arguments:** The script should be able to accept additional parameters, such as instance count and instance type, to customize the EC2 provisioning.
 
-2. **Environment Variables**: These are key-value pairs used to store configuration details for software applications or scripts. They allow flexibility in how software behaves in different environments (local, testing, production). For example, database connection details often change depending on the environment:
-   - **Local**: The application might connect to a local database.
-   - **Testing**: The application might connect to a testing database.
-   - **Production**: The application connects to a live database.
+---
 
-   These values are stored in environment variables so that the application can dynamically choose which set of values to use based on where it's running.
+### **Revised aws_cloud_manager.sh Script:**
 
-### Scripting with Environment Variables:
+```bash
+#!/bin/bash
 
-In this project, we used **bash shell scripting** to demonstrate how environment variables can be used to manage cloud infrastructure. We created a script (`aws_cloud_manager.sh`) that:
-   - Checks which environment the script is running in (local, testing, or production) based on an environment variable or command-line argument.
-   - Executes the appropriate commands based on the environment.
+# Function to provision EC2 instance using AWS CLI
+provision_instance() {
+  local environment=$1
+  local instance_type=$2
+  local instance_count=$3
+  local ami_id=$4
 
-### Step-by-Step Breakdown:
+  echo "Provisioning $instance_count EC2 instances in $environment environment..."
 
-1. **Setting Up the Environment**:
-   - The first step in the script was checking the environment variable (`$ENVIRONMENT`). Depending on its value, the script would execute different code paths for local, testing, or production environments.
-   - Example:
-     ```bash
-     if [ "$ENVIRONMENT" == "local" ]; then
-       echo "Running script for Local Environment..."
-     elif [ "$ENVIRONMENT" == "testing" ]; then
-       echo "Running script for Testing Environment..."
-     elif [ "$ENVIRONMENT" == "production" ]; then
-       echo "Running script for Production Environment..."
-     else
-       echo "No environment specified or recognized."
-       exit 2
-     fi
-     ```
+  for ((i = 1; i <= $instance_count; i++)); do
+    echo "Launching instance $i with instance type: $instance_type and AMI: $ami_id"
+    aws ec2 run-instances \
+      --image-id $ami_id \
+      --instance-type $instance_type \
+      --count 1 \
+      --subnet-id subnet-xyz123 \
+      --security-group-ids sg-abc123 \
+      --key-name my-key-pair \
+      --region us-east-1
 
-2. **Using `export` to Set Environment Variables**:
-   - The environment variable `$ENVIRONMENT` can be set dynamically using the `export` command in the terminal. For example:
-     ```bash
-     export ENVIRONMENT=production
-     ```
-   - This allows the script to run with the correct environment setting without hardcoding the value in the script itself.
+    if [ $? -eq 0 ]; then
+      echo "Instance $i launched successfully."
+    else
+      echo "Error: Failed to launch instance $i."
+    fi
+  done
+}
 
-3. **Making the Script Dynamic**:
-   - The script was initially static (e.g., checking only for a "local" environment) but was then enhanced to accept **command-line arguments**. This allowed users to specify the environment at runtime:
-     ```bash
-     ENVIRONMENT=$1
-     ```
+# Checking if the script has received sufficient arguments
+if [ "$#" -lt 3 ]; then
+  echo "Usage: $0 <environment> <instance_type> <instance_count>"
+  exit 1
+fi
 
-4. **Using Positional Parameters**:
-   - **Positional Parameters** are values passed to a script when it's run from the command line. These parameters are represented by `$1`, `$2`, `$3`, etc. For example, the following command:
-     ```bash
-     ./aws_cloud_manager.sh testing 5
-     ```
-     Would pass "testing" to the `$1` variable and "5" to the `$2` variable inside the script.
-   - In this case, `$1` would represent the environment, and `$2` could represent how many instances to create or other parameters.
+# Fetching the environment, instance type, and instance count from command-line arguments
+ENVIRONMENT=$1
+INSTANCE_TYPE=$2
+INSTANCE_COUNT=$3
 
-5. **Validating the Number of Arguments**:
-   - It's essential to validate the number of arguments passed to the script to avoid unexpected behavior or errors. For example:
-     ```bash
-     if [ "$#" -ne 1 ]; then
-       echo "Usage: $0 <environment>"
-       exit 1
-     fi
-     ```
-     This checks that exactly one argument (the environment) is passed to the script. If not, it shows a usage message and exits.
+# Defining AMI IDs for different environments
+case $ENVIRONMENT in
+  "local")
+    AMI_ID="ami-0123456789abcdef0"  # Replace with actual AMI ID for local environment
+    ;;
+  "testing")
+    AMI_ID="ami-0987654321fedcba0"  # Replace with actual AMI ID for testing environment
+    ;;
+  "production")
+    AMI_ID="ami-1234567890abcdef0"  # Replace with actual AMI ID for production environment
+    ;;
+  *)
+    echo "Invalid environment specified. Please use 'local', 'testing', or 'production'."
+    exit 2
+    ;;
+esac
 
-6. **Final Script**:
-   - The final version of the script would look something like this:
-     ```bash
-     #!/bin/bash
+# Calling the function to provision EC2 instances
+provision_instance $ENVIRONMENT $INSTANCE_TYPE $INSTANCE_COUNT $AMI_ID
 
-     # Checking the number of arguments
-     if [ "$#" -ne 1 ]; then
-         echo "Usage: $0 <environment>"
-         exit 1
-     fi
+```
 
-     # Accessing the first argument
-     ENVIRONMENT=$1
+### **Script Explanation:**
 
-     # Acting based on the argument value
-     if [ "$ENVIRONMENT" == "local" ]; then
-       echo "Running script for Local Environment..."
-       # Commands for local environment
-     elif [ "$ENVIRONMENT" == "testing" ]; then
-       echo "Running script for Testing Environment..."
-       # Commands for testing environment
-     elif [ "$ENVIRONMENT" == "production" ]; then
-       echo "Running script for Production Environment..."
-       # Commands for production environment
-     else
-       echo "Invalid environment specified. Please use 'local', 'testing', or 'production'."
-       exit 2
-     fi
-     ```
+1. **Environment Handling:** 
+   - The environment (`local`, `testing`, `production`) is passed as a command-line argument.
+   - Based on the provided environment, the script assigns a corresponding AMI ID.
+   
+2. **AWS EC2 Provisioning:**
+   - The `provision_instance` function takes care of provisioning EC2 instances using AWS CLI.
+   - It launches EC2 instances based on the environment, instance type, and instance count.
+   - It checks if the AWS CLI command was successful and provides feedback accordingly.
 
-7. **Permissions**:
-   - The script needs to be made executable by running the following command:
-     ```bash
-     sudo chmod +x aws_cloud_manager.sh
-     ```
+3. **Multiple Arguments:**
+   - The script accepts 3 arguments:
+     - `environment`: Specifies the environment (`local`, `testing`, `production`).
+     - `instance_type`: Specifies the EC2 instance type (e.g., `t2.micro`).
+     - `instance_count`: Specifies how many instances to provision.
+   
+4. **Error Handling & Feedback:**
+   - The script checks if the correct number of arguments are passed.
+   - If an invalid environment is specified, it outputs an error message.
+   - The AWS CLI `run-instances` command is executed within a loop for multiple instances. If an instance launch fails, the script outputs an error message.
 
-### Conclusion:
-In this mini project, I gained a comprehensive understanding of how to manage different environments in software development and cloud infrastructure through scripting. By utilizing environment variables and command-line arguments, I learned to create flexible, reusable scripts that can dynamically change their behavior based on the environment they are running in (local, testing, or production). Additionally, I incorporated best practices, such as validating input arguments, to ensure the script runs correctly and safely. This approach enables scalable and automated cloud management in environments like AWS.
+### **Improvements Based on Feedback:**
+- **AWS CLI Integration:** The script now includes logic to interact with the AWS CLI to provision EC2 instances.
+- **Multiple Parameters:** It dynamically handles the `instance_type` and `instance_count` parameters passed via command-line arguments.
+- **User Feedback:** The script provides feedback on whether the EC2 instance provisioning was successful or if it failed.
+
+### **Testing the Script:**
+
+To test the script, follow these steps:
+1. Ensure that the AWS CLI is installed and configured with appropriate credentials.
+2. Save the script as `aws_cloud_manager.sh`.
+3. Make the script executable:
+   ```bash
+   chmod +x aws_cloud_manager.sh
+   ```
+4. Run the script with different environments, instance types, and instance counts:
+   ```bash
+   ./aws_cloud_manager.sh production t2.micro 3
+   ```
+
+### **Challenges and Observations:**
+
+- **AMI IDs:** Each environment has its own specific AMI ID. This needs to be accurate for EC2 provisioning to work.
+- **AWS CLI Permissions:** Ensure that your AWS user has the necessary permissions to launch EC2 instances.
+- **Instance Types:** You can adjust the instance type (`t2.micro`, `t3.medium`, etc.) as per the requirements.
+
+By addressing these points, the script now effectively demonstrates the integration of environment variables, AWS CLI commands, and argument handling for provisioning EC2 instances in different environments.
