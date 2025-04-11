@@ -1,171 +1,111 @@
-```markdown
-# Mini Project - Understanding Environment Variables & Infrastructure Environments: Key Differences
+In this mini project, the focus was to understand two important concepts: **Infrastructure Environments** and **Environment Variables**, and how these concepts relate to each other, particularly in the context of shell scripting for managing cloud infrastructure, such as AWS.
 
-As we delve deeper into the world of technology and its building blocks, two essential concepts often come to the forefront: "Infrastructure Environments" and "Environment Variables." Despite both terms featuring "Environment," they play distinct roles in the realm of scripting and software development. This common terminology can lead to confusion, making it crucial to distinguish and understand each concept from the outset.
+### Key Concepts:
 
-## Infrastructure Environments
+1. **Infrastructure Environments**: These refer to the different settings in which software is developed, tested, and deployed. For example, in cloud-based development (using AWS), you could have multiple environments:
+   - **Local Environment**: The environment on your local machine (e.g., VirtualBox with Ubuntu).
+   - **Testing Environment**: A remote environment, such as an EC2 instance in AWS, where you test your code.
+   - **Production Environment**: The final environment where the application is deployed for end-users, typically hosted on another AWS EC2 instance.
 
-Infrastructure environments refer to the various settings where software applications are developed, tested, and deployed, each serving a unique purpose in the software lifecycle.
+   Each of these environments serves a different role in the software development lifecycle.
 
-Let’s say you are working with a development team to build a FinTech product. They have two different AWS accounts. The journey would be something like:
+2. **Environment Variables**: These are key-value pairs used to store configuration details for software applications or scripts. They allow flexibility in how software behaves in different environments (local, testing, production). For example, database connection details often change depending on the environment:
+   - **Local**: The application might connect to a local database.
+   - **Testing**: The application might connect to a testing database.
+   - **Production**: The application connects to a live database.
 
-- **VirtualBox + Ubuntu**: The development environment where all local development is done on your laptop.
-- **AWS Account 1**: The testing environment, where, after local development is completed, the code is pushed to an EC2 instance here for further testing.
-- **AWS Account 2**: The production environment, where, after tests are completed in AWS Account 1, the code is pushed to an EC2 instance in AWS Account 2, where customers consume the FinTech product through a website.
+   These values are stored in environment variables so that the application can dynamically choose which set of values to use based on where it's running.
 
-Each setup is considered an Infrastructure Environment.
+### Scripting with Environment Variables:
 
-## Environment Variables
+In this project, we used **bash shell scripting** to demonstrate how environment variables can be used to manage cloud infrastructure. We created a script (`aws_cloud_manager.sh`) that:
+   - Checks which environment the script is running in (local, testing, or production) based on an environment variable or command-line argument.
+   - Executes the appropriate commands based on the environment.
 
-On the other hand, environment variables are key-value pairs used in scripts or computer code to manage configuration values and control software behavior dynamically.
+### Step-by-Step Breakdown:
 
-Imagine your FinTech product needs to connect to a database to fetch financial data. However, the details of this database connection, like the database URL, username, and password differ between your development, testing, and production environments.
+1. **Setting Up the Environment**:
+   - The first step in the script was checking the environment variable (`$ENVIRONMENT`). Depending on its value, the script would execute different code paths for local, testing, or production environments.
+   - Example:
+     ```bash
+     if [ "$ENVIRONMENT" == "local" ]; then
+       echo "Running script for Local Environment..."
+     elif [ "$ENVIRONMENT" == "testing" ]; then
+       echo "Running script for Testing Environment..."
+     elif [ "$ENVIRONMENT" == "production" ]; then
+       echo "Running script for Production Environment..."
+     else
+       echo "No environment specified or recognized."
+       exit 2
+     fi
+     ```
 
-If you need to develop a shell script that will be reused across all the 3 different environments, then it is important to dynamically fetch the correct value for your connectivity to those environments.
+2. **Using `export` to Set Environment Variables**:
+   - The environment variable `$ENVIRONMENT` can be set dynamically using the `export` command in the terminal. For example:
+     ```bash
+     export ENVIRONMENT=production
+     ```
+   - This allows the script to run with the correct environment setting without hardcoding the value in the script itself.
 
-Here’s how environment variables come into play:
+3. **Making the Script Dynamic**:
+   - The script was initially static (e.g., checking only for a "local" environment) but was then enhanced to accept **command-line arguments**. This allowed users to specify the environment at runtime:
+     ```bash
+     ENVIRONMENT=$1
+     ```
 
-### Development Environment (VirtualBox + Ubuntu):
-```bash
-DB_URL=localhost
-DB_USER=test_user
-DB_PASS=test_pass
-```
-Here, the environment variables point to a local database on your laptop where you can safely experiment without affecting real or test data.
+4. **Using Positional Parameters**:
+   - **Positional Parameters** are values passed to a script when it's run from the command line. These parameters are represented by `$1`, `$2`, `$3`, etc. For example, the following command:
+     ```bash
+     ./aws_cloud_manager.sh testing 5
+     ```
+     Would pass "testing" to the `$1` variable and "5" to the `$2` variable inside the script.
+   - In this case, `$1` would represent the environment, and `$2` could represent how many instances to create or other parameters.
 
-### Testing Environment (AWS Account 1):
-```bash
-DB_URL=testing-db.example.com
-DB_USER=testing_user
-DB_PASS=testing_pass
-```
-In this environment, the variables are configured to connect to a remote database dedicated to testing. This ensures that tests are performed in a controlled environment that simulates production settings without risking actual customer data.
+5. **Validating the Number of Arguments**:
+   - It's essential to validate the number of arguments passed to the script to avoid unexpected behavior or errors. For example:
+     ```bash
+     if [ "$#" -ne 1 ]; then
+       echo "Usage: $0 <environment>"
+       exit 1
+     fi
+     ```
+     This checks that exactly one argument (the environment) is passed to the script. If not, it shows a usage message and exits.
 
-### Production Environment (AWS Account 2):
-```bash
-DB_URL=production-db.example.com
-DB_USER=prod_user
-DB_PASS=prod_pass
-```
-Finally, when the application is running in the production environment, the environment variables switch to ensure the application connects to the live database. This is where real customer interactions happen, and the data needs to be accurate and secure.
+6. **Final Script**:
+   - The final version of the script would look something like this:
+     ```bash
+     #!/bin/bash
 
-By clarifying these differences early on, we set a solid foundation for navigating the complexities of technology development with greater ease and precision.
+     # Checking the number of arguments
+     if [ "$#" -ne 1 ]; then
+         echo "Usage: $0 <environment>"
+         exit 1
+     fi
 
-## aws_cloud_manager.sh Script
+     # Accessing the first argument
+     ENVIRONMENT=$1
 
-By the end of this mini project, we would have started working on the `aws_cloud_manager.sh` script, where environment variables will be defined, and command-line arguments are added to control if the script should run for local, testing, or production environments.
+     # Acting based on the argument value
+     if [ "$ENVIRONMENT" == "local" ]; then
+       echo "Running script for Local Environment..."
+       # Commands for local environment
+     elif [ "$ENVIRONMENT" == "testing" ]; then
+       echo "Running script for Testing Environment..."
+       # Commands for testing environment
+     elif [ "$ENVIRONMENT" == "production" ]; then
+       echo "Running script for Production Environment..."
+       # Commands for production environment
+     else
+       echo "Invalid environment specified. Please use 'local', 'testing', or 'production'."
+       exit 2
+     fi
+     ```
 
-### Initial Script Setup
-```bash
-#!/bin/bash
+7. **Permissions**:
+   - The script needs to be made executable by running the following command:
+     ```bash
+     sudo chmod +x aws_cloud_manager.sh
+     ```
 
-# Checking and acting on the environment variable
-if [ "$ENVIRONMENT" == "local" ]; then
-  echo "Running script for Local Environment..."
-  # Commands for local environment
-elif [ "$ENVIRONMENT" == "testing" ]; then
-  echo "Running script for Testing Environment..."
-  # Commands for testing environment
-elif [ "$ENVIRONMENT" == "production" ]; then
-  echo "Running script for Production Environment..."
-  # Commands for production environment
-else
-  echo "No environment specified or recognized."
-  exit 2
-fi
-```
-
-### Adding Permissions
-```bash
-sudo chmod +x aws_cloud_manager.sh
-```
-
-You can test the script by setting the `ENVIRONMENT` variable dynamically:
-```bash
-export ENVIRONMENT=production
-./aws_cloud_manager.sh
-```
-This will output:
-```bash
-Running script for Production Environment...
-```
-
-### Dynamic Environment Selection
-Alternatively, you can hard-code the environment variable:
-```bash
-#!/bin/bash
-
-# Initialize environment variable
-ENVIRONMENT="testing"
-
-# Checking and acting on the environment variable
-if [ "$ENVIRONMENT" == "local" ]; then
-  echo "Running script for Local Environment..."
-elif [ "$ENVIRONMENT" == "testing" ]; then
-  echo "Running script for Testing Environment..."
-elif [ "$ENVIRONMENT" == "production" ]; then
-  echo "Running script for Production Environment..."
-else
-  echo "No environment specified or recognized."
-  exit 2
-fi
-```
-
-However, this is not dynamic, and using command-line arguments is a better approach.
-
-### Positional Parameters in Shell Scripting
-
-Positional parameters allow passing arguments to scripts at runtime, making the script flexible. For example:
-```bash
-./aws_cloud_manager.sh testing
-```
-Inside the script:
-```bash
-ENVIRONMENT=$1
-```
-
-For multiple parameters:
-```bash
-./aws_cloud_manager.sh testing 5
-```
-Inside the script:
-```bash
-ENVIRONMENT=$1
-NUMBER_OF_INSTANCES=$2
-```
-
-### Argument Validation
-
-To ensure the script gets the correct number of arguments:
-```bash
-if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 <environment>"
-  exit 1
-fi
-```
-
-Updated script:
-```bash
-#!/bin/bash
-
-# Checking the number of arguments
-if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 <environment>"
-  exit 1
-fi
-
-# Accessing the first argument
-ENVIRONMENT=$1
-
-# Acting based on the argument value
-if [ "$ENVIRONMENT" == "local" ]; then
-  echo "Running script for Local Environment..."
-elif [ "$ENVIRONMENT" == "testing" ]; then
-  echo "Running script for Testing Environment..."
-elif [ "$ENVIRONMENT" == "production" ]; then
-  echo "Running script for Production Environment..."
-else
-  echo "Invalid environment specified. Please use 'local', 'testing', or 'production'."
-  exit 2
-fi
-```
+### Conclusion:
+In this mini project, I gained a comprehensive understanding of how to manage different environments in software development and cloud infrastructure through scripting. By utilizing environment variables and command-line arguments, I learned to create flexible, reusable scripts that can dynamically change their behavior based on the environment they are running in (local, testing, or production). Additionally, I incorporated best practices, such as validating input arguments, to ensure the script runs correctly and safely. This approach enables scalable and automated cloud management in environments like AWS.
